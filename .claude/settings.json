@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -z \"$PROJECT_DEV\" ]; then echo \"ERRORE diary: variabile PROJECT_DEV non impostata. Configura 'env.PROJECT_DEV' (es. 'giuliano', 'francesco') in .claude/settings.local.json.\"; else DIARY=\"resources/memory/$(date +%Y-%m-%d).claude+${PROJECT_DEV}.diary.md\"; if [ -f \"$DIARY\" ]; then echo \"Diary attivo: $DIARY. Registra PRIMA (intenzione) e DOPO (esito) sotto l'ultimo capitolo orario. Se cambia argomento, apri un nuovo capitolo '## HH:MM — <Titolo>'.\"; else echo \"Nessun diary per oggi: crea $DIARY con il primo capitolo '## HH:MM — <Titolo argomento>' prima di iniziare.\"; fi; fi"
+          }
+        ]
+      }
+    ]
+  }
+}

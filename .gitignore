@@ -1,0 +1,22 @@
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Local Claude Code settings (personal overrides — kept out of the repo)
+.claude/settings.local.json
+
+# Environment files (will apply once backend/frontend exist)
+.env
+.env.local
+.env.*.local
+
+# Placeholders for when backend/frontend are scaffolded
+# node_modules/
+# vendor/
+# storage/
+# bootstrap/cache/
