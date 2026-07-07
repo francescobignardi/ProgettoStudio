@@ -1,5 +1,9 @@
 <?php
 
+namespace App;
+
+use App\Product;
+
 class Warehouse
 {
     private array $products;

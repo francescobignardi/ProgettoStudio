@@ -1,25 +1,25 @@
 <?php
 
+namespace App;
+
 class Product
 {
     private string $name;
     private int $quantity;
 
-    public function __construct($name, $quantity)
+    public function __construct(string $name, int $quantity)
     {
         $this->name = $name;
         $this->quantity = $quantity;
     }
 
-    public function isAvailable(){
-        if($this->quantity > 0){
-            return true;
-        } else {
-            return false;
-        }
+    public function isAvailable(): bool
+    {
+        return $this->quantity > 0;
     }
 
-    public function getName(){
+    public function getName(): string
+    {
         return $this->name;
     }
 }

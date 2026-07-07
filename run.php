@@ -1,7 +1,9 @@
 <?php
 
-require 'src/Product.php';
-require 'src/Warehouse.php';
+require __DIR__ . '/vendor/autoload.php';
+
+use App\Product;
+use App\Warehouse;
 
 $name1 = "Vite";
 $name2 = "Rondella";
