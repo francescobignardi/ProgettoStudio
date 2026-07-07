@@ -1,23 +1,31 @@
 <?php
 
-require 'Product.php';
+require 'src/Product.php';
+require 'src/Warehouse.php';
 
-$name = "Nome";
+$name1 = "Vite";
+$name2 = "Rondella";
+$name3 = "Cacciavite";
+$name4 = "Martello";
 $product1 = 5;
 $product2 = 0;
+$product3 = 2;
+$product4 = 1;
 
-$instance1 = new Product($name,$product1);
-$result1 = $instance1->isAvailable();
-if ($result1) {
-    echo 'Product1: true';
-} else {
-    echo 'Product1: false';
-}
+$instance1 = new Product($name1,$product1);
+$instance2 = new Product($name2,$product2);
+$instance3 = new Product($name3,$product3);
+$instance4 = new Product($name4,$product4);
 
-$instance2 = new Product($name,$product2);
-$result2 = $instance2->isAvailable();
-if ($result2) {
-    echo 'Product2: true';
-} else {
-    echo 'Product2: false';
+$array = [$instance1,$instance2,$instance3,$instance4];
+
+$warehouse = new Warehouse($array);
+
+echo "Prodotti disponibili: " . $warehouse->countAvailable();
+
+$available = $warehouse->availableProducts();
+
+echo "\nElenco disponibili:";
+foreach($available as $product) {
+    echo "\n- " . $product->getName();
 }

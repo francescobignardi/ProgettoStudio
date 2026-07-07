@@ -2,8 +2,8 @@
 
 class Product
 {
-    private $name;
-    private $quantity;
+    private string $name;
+    private int $quantity;
 
     public function __construct($name, $quantity)
     {
@@ -17,5 +17,9 @@ class Product
         } else {
             return false;
         }
+    }
+
+    public function getName(){
+        return $this->name;
     }
 }
