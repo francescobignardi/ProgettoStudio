@@ -48,7 +48,7 @@ Francesco è uno sviluppatore da 2 anni. Il lavoro quotidiano è ormai molto ass
 
 **Come parlano tra loro**: Laravel espone **API REST** (o eventualmente GraphQL, ma REST è più ambito sul mercato); Next.js consuma le API lato client e/o server. Autenticazione via **Laravel Sanctum** (token-based, adatto a SPA/mobile). Da rifinire quando arriveremo al primo scambio reale.
 
-**Ambiente locale**: **Docker Compose** per PHP, Postgres, eventualmente Redis. Frontend Next.js girerà probabilmente fuori Docker in dev (più veloce), da valutare.
+**Ambiente locale**: **Docker Compose** per PHP, MySQL, eventualmente Redis. Frontend Next.js girerà probabilmente fuori Docker in dev (più veloce), da valutare.
 
 **Test**: **PHPUnit** (o **Pest**, più moderno — da decidere quando scriveremo il primo test) lato Laravel; **Vitest** + **Playwright** lato Next.js. Non da subito: introduciamo test quando c'è codice a cui applicarli.
 
@@ -108,17 +108,42 @@ Entrambi i file sono in inglese (il progetto va sul GitHub personale, ha senso e
 
 Il nucleo di idee viene dagli standard interni scritti dal capo di Francesco (progetto An-Soft "staincampo5"). Nulla è copiato verbatim: è una versione adattata al contesto — progetto singolo, didattico, rigore moderato.
 
-## 9. Prossimi passi
+## 9. Percorso didattico e prossimi passi
 
-1. ✅ ~~Decidere il target~~ (§3) — fatto 2026-07-01.
-2. ✅ ~~Decidere lo stack~~ (§4) — fatto 2026-07-01.
-3. ✅ ~~Nome del progetto/repo~~ — `ProgettoStudio` (2026-07-01).
-4. **Repo GitHub personale** aperto da Francesco.
-5. **Primo ADR** (`ADR-0001-project-charter.md`) che cristallizzi identità del portfolio, stack scelto e motivazioni. Non parla ancora del gestionale nei dettagli — solo di cos'è il progetto in generale.
-6. **Scaffold minimo del monorepo**: struttura di cartelle (`backend/` Laravel, `frontend/` Next.js, `docker/`, `Makefile`) e primo "hello world" end-to-end. I dettagli tecnici (versioni Laravel/Next, come configurare Docker, come esporre l'API) si decidono quando ci arriviamo.
-7. **Sezione "chi sono" / vetrina** — probabilmente la prima cosa a essere davvero visibile, perché è la landing del portfolio.
-8. **Prima sezione tecnica: gestionale ordini** — a quel punto entriamo nel merito e decidiamo insieme modello dati, ruoli, giacenze, ecc. Prima è prematuro.
-9. **Sezioni successive** — da decidere strada facendo.
-10. **Standards specifici post-scelta stack**: `CODING-STANDARDS-PHP.md` (Laravel) e `CODING-STANDARDS-JS.md` (React/Next/TS) che estendono `STYLE-GUIDE.md`. Da scrivere **dopo** aver toccato codice reale — se li scriviamo prima, saranno cargo cult.
+Il 2026-07-07, dopo autovalutazione onesta di Francesco sui due linguaggi, è emerso un quadro molto asimmetrico:
+
+- **PHP**: basi e OOP intorno a "livello 2/3" (visti, scriverei con qualche incertezza). Gap principale: **Composer** (livello 1) e fluenza pratica ancora da consolidare.
+- **JavaScript e TypeScript**: praticamente da zero (livello 0-1 su tutto). Async, moduli e TS mai scritti.
+
+L'ipotesi iniziale del "doppio binario parallelo PHP/JS" è stata **rivista**: si parte PHP-first e JS/TS si introducono solo quando servirà il frontend del gestionale. Vantaggio: si consolida un livello che è a portata di mano invece di rincorrere due fronti in parallelo.
+
+### Rotta didattica (deciso 2026-07-07)
+
+**Fase 1 — Consolidamento fluenza PHP** (micro-esercizi giornalieri)
+- OOP applicato: più classi che collaborano, non oggetti-isolati (`Product` + `Warehouse` + `Order`, ecc.).
+- Array e cicli su collezioni reali di oggetti.
+- Type hints, nullable, union — vanno "stampati nelle dita".
+- Eccezioni scritte da Francesco, gerarchie custom.
+
+**Fase 2 — Composer + namespace applicati**
+- `composer init`, PSR-4 autoload, primo pacchetto esterno installato e usato.
+- Riorganizzazione degli esercizi in `src/` con namespace.
+
+**Fase 3 — Docker (ambiente locale pulito)**
+- `docker-compose.yml` semplice con PHP + MySQL. Nessun Laravel ancora — Docker come strumento generale, non come "ambiente Laravel".
+
+**Fase 4 — Laravel (ingresso al framework)**
+- Solo quando fluenza PHP + Composer + Docker sono in piedi. Altrimenti Laravel diventa magia.
+
+**Fase 5 — JS / TS / React**
+- Introdotto quando il gestionale ha bisogno di un frontend. Prima JS puro, poi TypeScript, poi React.
+
+### Passi paralleli / di infrastruttura (indipendenti dalle fasi didattiche)
+
+- **Primo ADR** (`ADR-0001-project-charter.md`) — identità del portfolio, stack, motivazioni. Da scrivere quando c'è un momento buono; non blocca l'avanzamento didattico.
+- **Scaffold minimo del monorepo** — arriva in Fase 3/4, non prima.
+- **Sezione "chi sono" / vetrina** — la costruiremo quando saremo pronti a mostrarla.
+- **Prima sezione tecnica: gestionale ordini** — inizia in Fase 4 (Laravel). Solo a quel punto decidiamo modello dati, ruoli, giacenze.
+- **Coding standards specifici** (`CODING-STANDARDS-PHP.md`, `CODING-STANDARDS-JS.md`) — dopo aver toccato codice reale, non prima.
 
 Da qui in poi si procede a piccoli passi giornalieri, sempre con l'obiettivo didattico in testa.
