@@ -1,0 +1,17 @@
+{
+    "name": "francesco/progetto-studio",
+    "description": "Progetto di studio personale — esercizi PHP e Laravel",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Francesco Bignardi",
+            "email": "f.bignardi@hotmail.it"
+        }
+    ],
+    "require": {},
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}

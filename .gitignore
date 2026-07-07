@@ -17,6 +17,6 @@
 
 # Placeholders for when backend/frontend are scaffolded
 # node_modules/
-# vendor/
 # storage/
 # bootstrap/cache/
+/vendor/
