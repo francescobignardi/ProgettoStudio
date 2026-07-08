@@ -30,8 +30,10 @@ Bootstrap is in progress: PHP fundamentals, Composer, and Docker Compose are alr
 ProgettoStudio/
 ├── src/                     # PHP classes (namespace App\, PSR-4 autoload)
 ├── run.php                  # Entry point for current PHP exercises
-├── composer.json            # PSR-4 autoload configuration
+├── db-check.php             # PDO connection check against the MySQL container
+├── composer.json            # PSR-4 autoload + platform requirements
 ├── docker-compose.yml       # Local dev environment (PHP 8.3 + MySQL 8.0)
+├── Dockerfile               # Custom PHP image (adds pdo_mysql on top of php:8.3-cli)
 ├── resources/
 │   ├── PROGETTO.md          # Project charter — purpose, decisions, next steps
 │   ├── appunti.md           # Personal study notes (in Italian)
@@ -60,4 +62,4 @@ Learning roadmap — PHP-first, JS/TS deferred until the frontend is needed:
 - [ ] **Phase 4** — Laravel
 - [ ] **Phase 5** — JavaScript / TypeScript / React
 
-Latest work: 2026-07-08 — Docker Compose environment up and running (`php run.php` runs identically inside the container).
+Latest work: 2026-07-08 — Custom Dockerfile adds `pdo_mysql` on top of `php:8.3-cli`, and a small `db-check.php` script verifies the PHP → MySQL connection end-to-end.

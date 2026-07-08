@@ -1,6 +1,6 @@
 services:
   php:
-    image: php:8.3-cli
+    build: .
     container_name: progettostudio-php
     working_dir: /app
     volumes:
