@@ -29,5 +29,5 @@ $available = $warehouse->availableProducts();
 
 echo "\nElenco disponibili:";
 foreach($available as $product) {
-    echo "\n- " . $product->getName();
+    echo "\n- " . $product->getName() . "\n";
 }

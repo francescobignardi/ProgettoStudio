@@ -22,22 +22,26 @@ Every commit here comes from a short, focused session. Progress is deliberately 
 - **Database**: MySQL
 - **Dev environment**: Docker Compose
 
-Nothing is set up yet — the choices are recorded, the code is coming.
+Bootstrap is in progress: PHP fundamentals, Composer, and Docker Compose are already in place. Laravel and the frontend come next.
 
 ## Repository layout
 
 ```
 ProgettoStudio/
+├── src/                     # PHP classes (namespace App\, PSR-4 autoload)
+├── run.php                  # Entry point for current PHP exercises
+├── composer.json            # PSR-4 autoload configuration
+├── docker-compose.yml       # Local dev environment (PHP 8.3 + MySQL 8.0)
 ├── resources/
 │   ├── PROGETTO.md          # Project charter — purpose, decisions, next steps
+│   ├── appunti.md           # Personal study notes (in Italian)
 │   ├── docs/                # Standards, architecture notes, ADRs
 │   └── memory/              # Working diaries (yes, they're versioned on purpose)
 ├── backend/                 # Laravel — coming
-├── frontend/                # Next.js — coming
-└── docker/                  # Docker Compose — coming
+└── frontend/                # Next.js — coming
 ```
 
-Everything currently lives in `resources/`. As sections of the site come online, `backend/`, `frontend/`, and `docker/` will appear.
+The exercises directly under root (`src/`, `run.php`) are the current PHP-fluency playground. Once Laravel enters the picture, application code will move under `backend/`.
 
 ## Where to look
 
@@ -48,4 +52,12 @@ Everything currently lives in `resources/`. As sections of the site come online,
 
 ## Status
 
-Day 1 — **2026-07-01**. Repository initialized. Charter and documentation setup in place. Scaffolding starts next.
+Learning roadmap — PHP-first, JS/TS deferred until the frontend is needed:
+
+- [x] **Phase 1** — PHP fluency (OOP, type hints, collaborating classes)
+- [x] **Phase 2** — Composer + namespaces + PSR-4 autoload
+- [x] **Phase 3** — Docker Compose (PHP + MySQL local environment)
+- [ ] **Phase 4** — Laravel
+- [ ] **Phase 5** — JavaScript / TypeScript / React
+
+Latest work: 2026-07-08 — Docker Compose environment up and running (`php run.php` runs identically inside the container).

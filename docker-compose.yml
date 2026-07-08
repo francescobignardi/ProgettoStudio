@@ -1,0 +1,22 @@
+services:
+  php:
+    image: php:8.3-cli
+    container_name: progettostudio-php
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: tail -f /dev/null
+  mysql:
+    image: mysql:8.0
+    container_name: progettostudio-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: progettostudio
+      MYSQL_USER: studio
+      MYSQL_PASSWORD: studio
+    ports:
+      - "3316:3306"
+    volumes:
+      - "mysql-data:/var/lib/mysql"
+volumes:
+  mysql-data:
