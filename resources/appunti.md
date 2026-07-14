@@ -15,6 +15,7 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [PDO — connessione a MySQL](#pdo--connessione-a-mysql)
 - [Laravel — routing + artisan serve](#laravel--routing--artisan-serve)
 - [Blade — grammatica minima](#blade--grammatica-minima)
+- [Laravel — controller (primo passo MVC)](#laravel--controller-primo-passo-mvc)
 
 ---
 
@@ -170,3 +171,37 @@ Il `@foreach` PHP ha due modalità che valgono anche in Blade: `$item` per liste
 - Se una variabile passata alla view non esiste, il template esplode con `Undefined variable`. Non c'è "silenzioso": Laravel preferisce errore visibile.
 - `{{ }}` fa escape automatico. Per iniettare HTML "così com'è" (raro, va fatto solo con dati fidati) esiste `{!! !!}`. Uso maligno = XSS servito.
 - Il nome della vista in `view('helloworld')` è **senza estensione e senza percorso**: Laravel per convenzione cerca `resources/views/helloworld.blade.php`. Sottocartelle → notazione a punti: `view('admin.dashboard')` → `resources/views/admin/dashboard.blade.php`.
+
+---
+
+### Laravel — controller (primo passo MVC)
+
+**Cos'è**: una classe in `app/Http/Controllers/` che raccoglie la logica di risposta alle richieste HTTP. Nella route resta solo la mappa `URL → azione`, il "cosa fa" vive nel controller. Prima incarnazione concreta di MVC: **Route** (mappa) → **Controller** (logica) → **View** (presentazione).
+
+**Perché esiste**: la closure inline in `routes/web.php` funziona per esempi banali. Appena la logica cresce (validazione input, query, decisioni), il file routes diventa un guazzabuglio. Il controller isola la logica in una classe testabile e riusabile.
+
+**Generazione**: `php artisan make:controller PrimoController` → crea `app/Http/Controllers/PrimoController.php` con lo scaffolding standard (namespace `App\Http\Controllers`, `extends Controller`, corpo vuoto). Convenzione nome: **PascalCase + suffisso `Controller`**.
+
+**Metodo minimo** (letteralmente il corpo della vecchia closure):
+```php
+public function ciao()
+{
+    return view('helloworld', [
+        'nome' => 'Francesco',
+    ]);
+}
+```
+
+**Aggancio dalla route**:
+```php
+use App\Http\Controllers\PrimoController;
+
+Route::get('/ciao', [PrimoController::class, 'ciao']);
+```
+Leggere come frase: "GET /ciao → esegui metodo `ciao` di `PrimoController`". La coppia `[Classe::class, 'metodo']` è la forma canonica moderna (Laravel 10/11+).
+
+**Perché array `::class` e non stringa `'PrimoController@ciao'`**: la vecchia forma stringa esiste ancora ma è "solo testo" — nessuno la valida finché non arriva una richiesta. Con `::class` l'IDE sa che la classe è reale: typo → segnalato, refactor → aggiorna anche la route.
+
+**Verifica**: `php artisan route:list` deve mostrare la route mappata a `App\Http\Controllers\PrimoController@ciao` invece di `Closure`. È la conferma "da dentro il framework" che il refactor è andato.
+
+**Nota MVC**: quando si sposta la logica dalla closure al controller, **la view non si tocca**. Il suo contratto è "dammi queste variabili e le mostro" — non le importa chi gliele passa. Questo è il punto del refactor: cambia il *come si costruiscono* i dati, non il *come si presentano*.

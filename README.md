@@ -39,7 +39,7 @@ ProgettoStudio/
 │   ├── appunti.md           # Personal study notes (in Italian)
 │   ├── docs/                # Standards, architecture notes, ADRs
 │   └── memory/              # Working diaries (yes, they're versioned on purpose)
-├── backend/                 # Laravel — coming
+├── backend/                 # Laravel (routes, controllers, Blade views)
 └── frontend/                # Next.js — coming
 ```
 
@@ -62,4 +62,4 @@ Learning roadmap — PHP-first, JS/TS deferred until the frontend is needed:
 - [ ] **Phase 4** — Laravel
 - [ ] **Phase 5** — JavaScript / TypeScript / React
 
-Latest work: 2026-07-08 — Custom Dockerfile adds `pdo_mysql` on top of `php:8.3-cli`, and a small `db-check.php` script verifies the PHP → MySQL connection end-to-end.
+Latest work: 2026-07-14 — Laravel is up in `backend/`, served via `artisan serve` behind Docker (host `:8080` → container `:8000`). First custom route hits a Blade view; logic then moved from an inline closure into a proper controller — the first taste of MVC in this project.
