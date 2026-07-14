@@ -13,6 +13,8 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [Docker + Docker Compose](#docker--docker-compose)
 - [Dockerfile custom + estensioni PHP](#dockerfile-custom--estensioni-php)
 - [PDO — connessione a MySQL](#pdo--connessione-a-mysql)
+- [Laravel — routing + artisan serve](#laravel--routing--artisan-serve)
+- [Blade — grammatica minima](#blade--grammatica-minima)
 
 ---
 
@@ -92,3 +94,79 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - MySQL Docker image crea **due utenti**: `root` (con `MYSQL_ROOT_PASSWORD`) e l'utente applicativo (`MYSQL_USER` + `MYSQL_PASSWORD`) — con permessi automatici solo sul database `MYSQL_DATABASE`. Least privilege: **mai usare `root` dall'applicazione**, root serve per operazioni amministrative.
 - Il messaggio di errore PDO distingue `using password: NO` (nessuna password fornita) da `using password: YES` (password fornita ma sbagliata) — utile in diagnosi.
 - Per usare `pdo_mysql`, l'estensione deve essere presente nell'immagine PHP → passa dal Dockerfile custom (vedi blocco sopra). L'estensione `mysqlnd` da sola non basta: è la libreria native driver low-level, va accoppiata a `pdo_mysql` o `mysqli`.
+
+---
+
+### Laravel — routing + artisan serve
+
+**Cos'è**: una **route** in Laravel è un collegamento `(URL + verbo HTTP) → codice da eseguire`. Il codice può essere una closure inline, un metodo di controller o direttamente il rendering di una view. Le route web si dichiarano in `routes/web.php`.
+
+**Sintassi minima**:
+```php
+Route::get('/ciao', function () {
+    return view('helloworld', ['nome' => 'Francesco']);
+});
+```
+- `Route::get` mappa richieste GET; equivalenti: `Route::post`, `::put`, `::delete`, `::patch`.
+- Path `/ciao` è relativo alla root del sito; supporta parametri dinamici `{id}`.
+
+**Strumenti di orientamento**:
+- `php artisan route:list` → tabella di tutte le route note, incluse quelle "regalate" dal framework (`storage/{path}` per file utente, `/up` per health check in Laravel 11+).
+- `php artisan list | grep make` → mappa dei generatori (`make:controller`, `make:model`, `make:view`, ecc.). Raggruppabili in famiglie: HTTP/routing, dati (ORM Eloquent), viste, asincrono, architettura. È il "sommario del framework in comandi".
+
+**`artisan serve` in container**:
+- Server di sviluppo di Laravel (basato su `php -S`, non per produzione).
+- Dentro un container: `php artisan serve --host=0.0.0.0 --port=8000`. `--host=0.0.0.0` è **obbligatorio** — il default `127.0.0.1` fa ascoltare solo il loopback interno del container, invisibile dall'host anche col port mapping aperto.
+- Nel `docker-compose.yml`: `ports: - "8080:8000"` (host:container). Dal Mac apri `http://localhost:8080`.
+
+**Catena end-to-end** (utile in debug): browser → port mapping compose → `artisan serve` in ascolto sulla porta interna → router Laravel → route match in `routes/web.php` → view resa. Se qualcosa non funziona, si percorre la catena in quest'ordine.
+
+**Insidie**:
+- `php artisan <qualcosa>` va lanciato **dentro il container**, in `/app/backend`. `artisan` è un file PHP fisico, non un comando globale; l'errore `Could not open input file: artisan` significa "sono nella cartella sbagliata".
+- Il server `artisan serve` occupa il terminale (foreground). Per lanciare altri comandi `artisan` servono **due terminali paralleli**: uno per il server, uno per i comandi di gestione.
+- Se cambi il `docker-compose.yml` (es. aggiungi/modifichi `ports:`), serve `docker compose up -d` per applicare — non basta `restart`. `ps` mostra il container "Created 5 days ago" se non è stato ricreato; leggere `docker compose ps`, non l'output di `up`, per la verità.
+
+---
+
+### Blade — grammatica minima
+
+**Cos'è**: motore di templating di Laravel. I file `.blade.php` in `resources/views/` sono templating **compilato**: Laravel li trasforma al volo in PHP puro cachato, poi li esegue. Non è un linguaggio a sé — è zucchero sopra PHP.
+
+**Due sintassi cardine**:
+- `{{ $variabile }}` → **interpolazione**: stampa il valore, con escape HTML automatico (protezione XSS base). Va nel testo del template.
+- `@direttiva ... @enddirettiva` → **controllo di flusso e composizione**. Chiusura esplicita obbligatoria.
+
+Il salto mentale che serve: Blade mescola *due modelli*. `{{ }}` è "template + segnaposto" (il modo di pensare del designer HTML); `@if / @foreach` è "programmazione" (il modo di pensare del dev). Un template maturo usa entrambi.
+
+**Come i dati arrivano alla vista**:
+```php
+return view('helloworld', [
+    'nome' => 'Francesco',
+    'colori' => ['rosso', 'blu', 'giallo'],
+    'ruoli' => ['Paolo' => 'Admin', 'Luca' => 'Operaio'],
+]);
+```
+`view()` ha due argomenti soli: nome vista + **un array di dati**. Laravel "spacchetta" l'array associativo: ogni chiave diventa una variabile omonima nel template. Tipi arbitrari (stringhe, liste, dizionari, oggetti, ecc.).
+
+**Direttive più usate (viste oggi)**:
+```blade
+@if($nome == 'Francesco')
+    <p>Ciao {{ $nome }}</p>
+@endif
+
+@foreach($colori as $colore)
+    <p>{{ $colore }}</p>
+@endforeach
+
+@foreach($ruoli as $persona => $ruolo)
+    <p>{{ $persona }}: {{ $ruolo }}</p>
+@endforeach
+```
+
+Il `@foreach` PHP ha due modalità che valgono anche in Blade: `$item` per liste (indice numerico ignorato), `$chiave => $valore` per dizionari. Simmetria elegante col `=>` dell'inizializzazione — è lo stesso simbolo per "questa chiave punta a questo valore", sia quando costruisci l'array sia quando lo scomponi.
+
+**Insidie**:
+- Chiusura obbligatoria: `@endif`, `@endforeach`, `@endforelse`, ecc. Errore tipico "unexpected end of file" = manca un `@end…`.
+- Se una variabile passata alla view non esiste, il template esplode con `Undefined variable`. Non c'è "silenzioso": Laravel preferisce errore visibile.
+- `{{ }}` fa escape automatico. Per iniettare HTML "così com'è" (raro, va fatto solo con dati fidati) esiste `{!! !!}`. Uso maligno = XSS servito.
+- Il nome della vista in `view('helloworld')` è **senza estensione e senza percorso**: Laravel per convenzione cerca `resources/views/helloworld.blade.php`. Sottocartelle → notazione a punti: `view('admin.dashboard')` → `resources/views/admin/dashboard.blade.php`.
