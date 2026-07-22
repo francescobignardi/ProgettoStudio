@@ -62,4 +62,4 @@ Learning roadmap — PHP-first, JS/TS deferred until the frontend is needed:
 - [ ] **Phase 4** — Laravel
 - [ ] **Phase 5** — JavaScript / TypeScript / React
 
-Latest work: 2026-07-22 — First Eloquent slice, end to end. A `products` table (migration), a `Product` model, and a seeder now feed a `ProductController` that reads from MySQL and renders the rows in a Blade view. The MVC triangle is closed with real data: **DB → Model → Controller → Route → View → browser**.
+Latest work: 2026-07-22 — First Eloquent slice, end to end. A `products` table (migration), a `Product` model, and a seeder now feed a `ProductController` that reads from MySQL and renders the rows in a Blade view. The MVC triangle is closed with real data: **DB → Model → Controller → Route → View → browser**. The controller then grew a filtered list (`where('stock', '>', 0)`) and a single-product detail page (`show` via a `/products/{id}` route, `findOrFail` → a clean 404 when the id doesn't exist).

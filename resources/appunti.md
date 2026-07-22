@@ -324,3 +324,28 @@ La strada che un dato percorre dal DB fino allo schermo. Da tenere a mente: **qu
 **`@forelse` invece di `@foreach`+`@isset`**: per una lista, il caso reale da gestire non è "la variabile non esiste" (è garantita dal contratto controller→view; difendersi da una garanzia *nasconde* i bug invece di esporli), ma "la lista è **vuota**". `@forelse ($products as $product) … @empty … @endforelse` copre proprio quello. Nota: dentro `@forelse`, `@empty` va **nudo** (senza parentesi) — `@empty($var)` è un *altro* costrutto che vuole `@endempty` → "unexpected end of file".
 
 **Regola trasversale (Clean Code)**: spendi codice/verbosità dove c'è **vera incertezza** (input utente, API esterne, liste che possono essere vuote), NON dove c'è una **garanzia** (una variabile che passi tu stesso due righe prima). Il `$fillable` è verbosità *buona* (decisione di sicurezza); l'`@isset` su un dato garantito è rumore.
+
+#### Interrogare Eloquent: `where`, `get`, `find`, `findOrFail`
+
+Superare `all()` (che prende *tutto*) per chiedere solo una fetta.
+
+- **`Product::where('stock', '>', 0)->get()`** → filtro. Punto chiave: `where()` **non esegue**, costruisce un *query builder* (una domanda in attesa). L'SQL parte solo con **`->get()`**. I metodi si **concatenano** (*fluent interface*): `where(...)->where(...)->orderBy(...)->get()`. `all()` era la scorciatoia costruisci+esegui, per questo non aveva `->get()`.
+  - `where('colonna', 'operatore', 'valore')` a 3 argomenti (operatore stringa: `>`, `<`, `>=`, `!=`, `like`…). Forma a 2 arg sottintende `=`.
+  - Filtrare col DB vs ciclare in PHP: su volumi grandi `where` restituisce solo le righe utili, il ciclo PHP le caricherebbe tutte in memoria. È una delle ragioni d'essere dell'ORM. (Rivede l'`isAvailable()` scritto a mano negli esercizi EO: stessa logica, delegata al DB.)
+- **`Product::find($id)`** → cerca **per chiave primaria**, restituisce **un solo oggetto** (non una collezione → niente `@foreach`, accesso diretto `$product->name`). Se l'id non esiste restituisce **`null`** → poi `$product->name` su null = *"Attempt to read property on null"*.
+- **`Product::findOrFail($id)`** → "trova **o fallisci**": come `find`, ma se non trova lancia un'eccezione che Laravel converte in **404**. Una riga, nessun `if`. = `find` + guardia null + `abort(404)` impacchettati. Nome *parlante* (Clean Code: dice cosa fa). Preferirlo, sapendo cosa nasconde.
+
+#### Route con parametro dinamico + dettaglio (show)
+
+- **`Route::get('/products/{id}', [ProductController::class, 'show'])`** — le graffe `{id}` catturano un segmento variabile dell'URL (`/products/1` → `id=1`). Stesso meccanismo di `storage/{path}` visto in `route:list`.
+- Il valore catturato arriva come **argomento del metodo**: `public function show(int $id)`. Il nome del parametro deve **combaciare** con quello nelle graffe (accoppiati per nome, non posizione). Type-hint `int` opzionale ma documenta.
+- Convenzione resource: `index` = lista, **`show`** = dettaglio singolo (poi `store`/`update`/`destroy`).
+
+**Dove va la guardia "risorsa inesistente": nel controller, non in Blade.** Principio: il **controller decide**, la **view presenta**. Mettere `@if`/`@isset` in Blade per gestire il null significa dare una *decisione* alla view (responsabilità sbagliata) — e peggio, la pagina risponderebbe `200 OK` ("tutto bene") mentre la risorsa non esiste: una bugia verso browser/SEO/frontend. "Questa risorsa non esiste" è una decisione **HTTP** (→ 404), sta nel controller. Con la guardia lì, alla view il dato arriva *garantito* → niente `@isset` (di nuovo: no difese su dati garantiti).
+
+#### ⚠️ Array indicizzato vs associativo (grammatica PHP, non Laravel)
+
+Errore classico con `view()`: `return view('product', [$product])` → in Blade *"Undefined variable $product"*.
+- `[$product]` = array **indicizzato**: PHP assegna la chiave numerica `0`. `view()` prova a creare una variabile da quella chiave → nome non valido → la variabile non esiste in Blade.
+- `['product' => $product]` = array **associativo**: la chiave stringa `'product'` diventa `$product` nel template.
+- Regola: `view()` (e molta parte di Laravel) vuole **`'nome' => $valore`**. Conta la **chiave-stringa** (= il nome dall'altra parte), NON il nome della variabile PHP passata. Stesso `=>` del `@foreach($x as $k => $v)`.
