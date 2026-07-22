@@ -11,3 +11,5 @@ Route::get('/', function () {
 Route::get('/ciao', [PrimoController::class, 'ciao']);
 
 Route::get('/products', [ProductController::class, 'index']);
+
+Route::get('/products/{id}', [ProductController::class, 'show']);
