@@ -39,11 +39,11 @@ ProgettoStudio/
 │   ├── appunti.md           # Personal study notes (in Italian)
 │   ├── docs/                # Standards, architecture notes, ADRs
 │   └── memory/              # Working diaries (yes, they're versioned on purpose)
-├── backend/                 # Laravel (routes, controllers, Blade views)
+├── backend/                 # Laravel (routes, controllers, Eloquent models, migrations, seeders, Blade views)
 └── frontend/                # Next.js — coming
 ```
 
-The exercises directly under root (`src/`, `run.php`) are the current PHP-fluency playground. Once Laravel enters the picture, application code will move under `backend/`.
+The exercises directly under root (`src/`, `run.php`) are the early PHP-fluency playground, kept as a record. Application code now lives under `backend/`, where Laravel runs.
 
 ## Where to look
 
@@ -62,4 +62,4 @@ Learning roadmap — PHP-first, JS/TS deferred until the frontend is needed:
 - [ ] **Phase 4** — Laravel
 - [ ] **Phase 5** — JavaScript / TypeScript / React
 
-Latest work: 2026-07-14 — Laravel is up in `backend/`, served via `artisan serve` behind Docker (host `:8080` → container `:8000`). First custom route hits a Blade view; logic then moved from an inline closure into a proper controller — the first taste of MVC in this project.
+Latest work: 2026-07-22 — First Eloquent slice, end to end. A `products` table (migration), a `Product` model, and a seeder now feed a `ProductController` that reads from MySQL and renders the rows in a Blade view. The MVC triangle is closed with real data: **DB → Model → Controller → Route → View → browser**.

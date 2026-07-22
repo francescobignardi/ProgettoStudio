@@ -9,6 +9,7 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 
 ## Indice
 
+- [⚡ Avvio rapido (cheat sheet)](#-avvio-rapido-cheat-sheet)
 - [Composer + autoload PSR-4](#composer--autoload-psr-4)
 - [Docker + Docker Compose](#docker--docker-compose)
 - [Dockerfile custom + estensioni PHP](#dockerfile-custom--estensioni-php)
@@ -16,6 +17,43 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [Laravel — routing + artisan serve](#laravel--routing--artisan-serve)
 - [Blade — grammatica minima](#blade--grammatica-minima)
 - [Laravel — controller (primo passo MVC)](#laravel--controller-primo-passo-mvc)
+- [Eloquent — model, migration, seeder + flusso del dato](#eloquent--model-migration-seeder--flusso-del-dato)
+
+---
+
+### ⚡ Avvio rapido (cheat sheet)
+
+Promemoria operativo: come accendo tutto e dove giro i comandi. Copia-incolla, non concetti.
+
+**1. Accendere lo stack** (dal Mac, nella cartella del progetto)
+```
+docker compose up -d      # accende php + mysql in background
+docker compose ps         # verifica: entrambi "Up"
+```
+
+**2. Entrare nel container** (dove girano artisan/composer, in `/app/backend`)
+```
+docker exec -it -w /app/backend progettostudio-php bash
+```
+
+**3. Avviare il server web** (dentro il container)
+```
+php artisan serve --host=0.0.0.0 --port=8000
+```
+Il terminale resta "appeso" (foreground). Per i comandi `artisan` di gestione serve un **secondo** terminale (nuova shell col comando del punto 2).
+
+**4. Aprire nel browser del Mac** → **`http://localhost:8080`** (NON 8000!)
+- La 8080 è il "buco nel muro" del compose (`"8080:8000"`). La 8000 è interna al container.
+- `php artisan serve` stampa `http://0.0.0.0:8000`: è la vista *interna*, NON l'URL da digitare. Errore classico: aprire 8000 → "impossibile raggiungere il sito".
+
+**Comandi DB ricorrenti** (secondo terminale, dentro il container)
+```
+php artisan migrate                 # applica le migration nuove
+php artisan migrate:fresh --seed    # RESET totale: droppa tutto, ricrea, ripopola (solo dev!)
+php artisan db:seed                 # ripopola (NB: i seeder accumulano, non resettano)
+```
+
+**Connessione SequelAce** (dal Mac): host `127.0.0.1` — port `3316` — user/pass `studio` — db `progettostudio`. Mai il nome del container come host (quello lo risolve solo Docker internamente).
 
 ---
 
@@ -205,3 +243,84 @@ Leggere come frase: "GET /ciao → esegui metodo `ciao` di `PrimoController`". L
 **Verifica**: `php artisan route:list` deve mostrare la route mappata a `App\Http\Controllers\PrimoController@ciao` invece di `Closure`. È la conferma "da dentro il framework" che il refactor è andato.
 
 **Nota MVC**: quando si sposta la logica dalla closure al controller, **la view non si tocca**. Il suo contratto è "dammi queste variabili e le mostro" — non le importa chi gliele passa. Questo è il punto del refactor: cambia il *come si costruiscono* i dati, non il *come si presentano*.
+
+---
+
+### Eloquent — model, migration, seeder + flusso del dato
+
+**Cos'è Eloquent**: l'**ORM** (Object-Relational Mapping) di Laravel. Mappa **tabella ↔ classe** e **riga ↔ oggetto**, così si opera sul DB scrivendo codice PHP invece di SQL. Pattern sottostante: **Active Record** (l'oggetto *è* una riga, sa salvarsi/caricarsi da sé).
+
+**I due pregi concreti** (oltre alla comodità):
+- **Sicurezza**: sotto usa query parametrizzate (PDO prepared statement) → SQL injection e escaping non sono più un problema tuo.
+- **Il codice parla di dominio, non di tabelle**: `$ordine->cliente->indirizzo` invece di JOIN a mano. (Le relazioni arriveranno col gestionale.)
+
+#### Migration — versionare lo *schema*
+
+**Cos'è**: un file che *descrive una trasformazione dello schema* (crea/modifica tabelle), ripetibile e versionata in git. Non è "modificare il DB a mano" (quello è SequelAce): è un **log storico + strumento di team/deploy**.
+
+- Genera: **`php artisan make:migration create_products_table`** → `database/migrations/<timestamp>_create_products_table.php`.
+- `up()` = cosa fare (crea la tabella), `down()` = come annullare (droppala). Il `down()` di una `create` è banale; il dolore nasce dalle `alter` (rimuovere colonna/PK: l'inverso non è pulito → va scritto a mano).
+- Colonne: `$table->string('name')`, `$table->decimal('price', 8, 2)`, `$table->integer('stock')`, più `$table->id()` (PK auto-increment) e `$table->timestamps()` (`created_at`/`updated_at` gestiti da Eloquent).
+- **Sintassi da ricordare**: `$table->TIPO('nome_colonna')` — il **tipo è il metodo** (insieme chiuso e noto), il **nome è l'argomento** (libero). NON `$table->nome('tipo')`.
+- **`decimal` per i prezzi, mai `float`**: il float ha errori di rappresentazione (10.10+0.20 → 10.2999…). `decimal(precision, scale)`: precisione totale + decimali. `8,2` = euro. Scriverlo esplicito anche se è il default: è una *decisione di dominio*, va resa leggibile (l'IDE lo segnala come ridondante → falso positivo, ignoralo).
+- Applica: **`php artisan migrate`** (esegue solo le migration non ancora applicate).
+
+**Tabella `migrations`**: checklist interna (colonne `migration`, `batch`) di *quali file sono già stati eseguiti*. È il tracciamento che rende `migrate` idempotente. Diversa da git (git versiona il *codice*, incluse le migration; la tabella dice "di quei file, questi li ho già applicati *a questo* DB").
+
+#### Model — l'oggetto che mappa la tabella
+
+- Genera: **`php artisan make:model Product`** → `app/Models/Product.php`. Classe **quasi vuota**: Eloquent legge lo schema a runtime, non ripete le colonne (*convention over configuration*).
+- **Convenzione nome**: model **singolare PascalCase** (`Product`), tabella **plurale** (`products`). Il plurale è derivato in **inglese** → con nomi italiani la convenzione si rompe (`Prodotto`→`prodottos`); per questo qui si usano nomi inglesi.
+- **`$fillable`** (da aggiungere a mano): whitelist delle colonne riempibili in blocco via array. `Product::create(['name'=>…])` è **mass assignment**, che Laravel blocca di default per sicurezza (evita che un form inietti campi non previsti tipo `is_admin`). Forma standard: `protected $fillable = ['name','price','stock'];` (senza type-hint).
+
+**Collisione EO ↔ Active Record** (da tenere a mente): Eloquent = oggetto-guscio permissivo (`new Product()` vuoto è lecito, si riempie dopo). L'approccio EO = costruttore esplicito che protegge gli invarianti (non esiste un `Product` senza nome). Due filosofie, prezzi diversi: Eloquent baratta rigore per velocità.
+
+#### Seeder — popolare il DB con dati di partenza
+
+- Genera: **`php artisan make:seeder ProductSeeder`** → `database/seeders/ProductSeeder.php`. Convenzione nome: suffisso **`Seeder`** intero.
+- Dentro `run()`: un `Product::create([...])` **per riga** (un array = una riga). Serve `use App\Models\Product;`.
+- **Va registrato** in `DatabaseSeeder` (l'*entry point* del seeding) con `$this->call(ProductSeeder::class);`. Poi:
+  - **`php artisan db:seed`** → esegue `DatabaseSeeder::run()` (e quindi i seeder registrati, in ordine).
+  - **`php artisan db:seed --class=ProductSeeder`** → esegue solo quello.
+- **⚠️ I seeder NON hanno memoria** (nessuna tabella di tracciamento, a differenza delle migration). Rilanciare `db:seed` **riesegue tutto e accumula** (4 prodotti → 8 → 12…), e sbatte contro i vincoli `unique` (es. lo `User` di default con email unica → `UniqueConstraintViolationException`).
+- **Reset pulito**: **`php artisan migrate:fresh --seed`**. `fresh` **droppa TUTTE le tabelle** (ignora i `down()`, non è un rollback per batch), rilancia tutte le migration da zero (id azzerati), poi `--seed` ripopola. È il "reset del mondo" quotidiano in sviluppo — e la risposta al dolore del `down()` chirurgico: in dev si rade al suolo, non si fanno rollback fini. **MAI in produzione** (cancella tutti i dati).
+
+#### 🔀 Flusso del dato (mappa mentale per il debug)
+
+La strada che un dato percorre dal DB fino allo schermo. Da tenere a mente: **quando qualcosa non appare, si percorre questa catena a ritroso** per capire *dove* si è perso.
+
+```
+  ┌──────────────┐     Product::all()      ┌──────────────────┐
+  │   DATABASE    │  ────────────────────▶  │      MODEL        │
+  │ tabella       │   (Eloquent genera lo    │  Product          │
+  │ `products`    │    SELECT, mappa righe   │  (app/Models/)    │
+  │ (righe SQL)   │    → oggetti)            │  1 oggetto = 1 riga│
+  └──────────────┘                          └──────────────────┘
+                                                     │
+                                                     │ il controller chiede i dati
+                                                     ▼
+  ┌──────────────┐   Route::get('/prodotti',  ┌──────────────────┐
+  │   ROUTE       │   [ProductController::      │   CONTROLLER      │
+  │ routes/web.php│ ◀─── class, 'index'])       │  ProductController │
+  │ URL → azione  │   ─────────────────────▶   │  ::index()         │
+  └──────────────┘   (la richiesta HTTP        │  $products =       │
+         ▲            entra da qui)            │   Product::all();  │
+         │                                     │  return view(...)  │
+   browser: GET                                └──────────────────┘
+   localhost:8080/prodotti                              │
+         │                                              │ view('products', ['products'=>$products])
+         │                                              ▼
+  ┌──────────────┐                            ┌──────────────────┐
+  │   BROWSER      │  ◀───────────────────────  │      VIEW         │
+  │ HTML reso     │    (Blade compila in PHP,   │ products.blade.php │
+  │ (i 4 prodotti)│     interpola i dati)       │ @forelse + ->name  │
+  └──────────────┘                            └──────────────────┘
+```
+
+**Come leggerlo**: la richiesta entra dal **browser** → la **route** decide *quale azione* → il **controller** chiede i dati al **model** → il model interroga il **DB** e restituisce oggetti → il controller li passa alla **view** → Blade li rende in HTML → torna al browser. Il dato viaggia DB→schermo, la richiesta viaggia in senso opposto.
+
+**Accesso ai dati in Blade**: gli elementi ciclati sono **oggetti**, non array → si accede con la **freccia `->`**: `{{ $product->name }}`, non `{{ $product['name'] }}`. (Un oggetto Eloquent stampato "nudo" con `{{ $product }}` viene serializzato in **JSON** — non è un errore, è la forma-API dei model, quella che userà il frontend React.)
+
+**`@forelse` invece di `@foreach`+`@isset`**: per una lista, il caso reale da gestire non è "la variabile non esiste" (è garantita dal contratto controller→view; difendersi da una garanzia *nasconde* i bug invece di esporli), ma "la lista è **vuota**". `@forelse ($products as $product) … @empty … @endforelse` copre proprio quello. Nota: dentro `@forelse`, `@empty` va **nudo** (senza parentesi) — `@empty($var)` è un *altro* costrutto che vuole `@endempty` → "unexpected end of file".
+
+**Regola trasversale (Clean Code)**: spendi codice/verbosità dove c'è **vera incertezza** (input utente, API esterne, liste che possono essere vuote), NON dove c'è una **garanzia** (una variabile che passi tu stesso due righe prima). Il `$fillable` è verbosità *buona* (decisione di sicurezza); l'`@isset` su un dato garantito è rumore.
