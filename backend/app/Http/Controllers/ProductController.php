@@ -9,7 +9,7 @@ class ProductController extends Controller
 {
     public function index()
     {
-        $products = Product::where('stock', '>', 0)->get();
+        $products = Product::where('stock', '>', 0)->orderBy('price', 'desc')->orderBy('name', 'asc')->get();
         return view('products', [
             'products' => $products
         ]);
