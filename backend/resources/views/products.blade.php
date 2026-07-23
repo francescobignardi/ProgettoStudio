@@ -6,4 +6,5 @@
     @empty
         <p>Nessun prodotto disponibile.</p>
     @endforelse
+    <a href="/products/create">Crea un nuovo prodotto</a>
 </div>

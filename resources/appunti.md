@@ -18,6 +18,7 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [Blade — grammatica minima](#blade--grammatica-minima)
 - [Laravel — controller (primo passo MVC)](#laravel--controller-primo-passo-mvc)
 - [Eloquent — model, migration, seeder + flusso del dato](#eloquent--model-migration-seeder--flusso-del-dato)
+- [CRUD — scrivere dati: form, POST, validazione, store (la C)](#crud--scrivere-dati-form-post-validazione-store-la-c)
 
 ---
 
@@ -332,6 +333,7 @@ Superare `all()` (che prende *tutto*) per chiedere solo una fetta.
 - **`Product::where('stock', '>', 0)->get()`** → filtro. Punto chiave: `where()` **non esegue**, costruisce un *query builder* (una domanda in attesa). L'SQL parte solo con **`->get()`**. I metodi si **concatenano** (*fluent interface*): `where(...)->where(...)->orderBy(...)->get()`. `all()` era la scorciatoia costruisci+esegui, per questo non aveva `->get()`.
   - `where('colonna', 'operatore', 'valore')` a 3 argomenti (operatore stringa: `>`, `<`, `>=`, `!=`, `like`…). Forma a 2 arg sottintende `=`.
   - Filtrare col DB vs ciclare in PHP: su volumi grandi `where` restituisce solo le righe utili, il ciclo PHP le caricherebbe tutte in memoria. È una delle ragioni d'essere dell'ORM. (Rivede l'`isAvailable()` scritto a mano negli esercizi EO: stessa logica, delegata al DB.)
+  - **`->orderBy('colonna', 'asc'|'desc')`** → ordinamento, altro anello *di costruzione* (va **prima** di `->get()`). Concatenabile per il tie-break: `->orderBy('price','desc')->orderBy('name','asc')` = SQL `ORDER BY price DESC, name ASC` (il 2° criterio scatta solo a parità del 1°; le direzioni possono differire). **Punto non ovvio**: un `SELECT` senza `ORDER BY` **non garantisce nessun ordine** — se "sembra" ordinato per id è un accidente di InnoDB, fragile (cambia motore/indice → cambia l'ordine senza toccare codice). `orderBy` rende l'ordine *esplicito e garantito*. Stesso criterio di `decimal(8,2)` e della guardia 404: rendere esplicita una decisione, non affidarla al default.
 - **`Product::find($id)`** → cerca **per chiave primaria**, restituisce **un solo oggetto** (non una collezione → niente `@foreach`, accesso diretto `$product->name`). Se l'id non esiste restituisce **`null`** → poi `$product->name` su null = *"Attempt to read property on null"*.
 - **`Product::findOrFail($id)`** → "trova **o fallisci**": come `find`, ma se non trova lancia un'eccezione che Laravel converte in **404**. Una riga, nessun `if`. = `find` + guardia null + `abort(404)` impacchettati. Nome *parlante* (Clean Code: dice cosa fa). Preferirlo, sapendo cosa nasconde.
 
@@ -349,3 +351,63 @@ Errore classico con `view()`: `return view('product', [$product])` → in Blade 
 - `[$product]` = array **indicizzato**: PHP assegna la chiave numerica `0`. `view()` prova a creare una variabile da quella chiave → nome non valido → la variabile non esiste in Blade.
 - `['product' => $product]` = array **associativo**: la chiave stringa `'product'` diventa `$product` nel template.
 - Regola: `view()` (e molta parte di Laravel) vuole **`'nome' => $valore`**. Conta la **chiave-stringa** (= il nome dall'altra parte), NON il nome della variabile PHP passata. Stesso `=>` del `@foreach($x as $k => $v)`.
+
+---
+
+### CRUD — scrivere dati: form, POST, validazione, store (la C)
+
+Finora solo **lettura** (R): il controller *restituisce* dati. Con la **C** (Create) il flusso si inverte — il controller **riceve** dati dall'utente e li **scrive**. "Creare un prodotto" sono **due rotte in coppia** (pattern resource):
+```php
+Route::get('/products/create', [ProductController::class, 'create']);  // mostra il FORM
+Route::post('/products',       [ProductController::class, 'store']);    // RICEVE, valida, salva, redirige
+```
+
+**⚠️ Ordine delle route: specifiche prima delle generiche.** `GET /products/{id}` messa *prima* di `/products/create` → `{id}` (jolly, accetta tutto) cattura la stringa `"create"` → `show("create")`. Laravel legge dall'alto e si ferma alla **prima** che combacia. Quindi `create` va **sopra** `{id}`. (Bonus: il type-hint `int $id` ha reso il bug un **TypeError** esplicito invece di un 404 confuso → *fail-fast*.)
+
+**GET vs POST (il verbo conta).** `GET` = *chiedo/navigo* (leggo, ricaricabile senza danni, bookmarkabile). `POST` = *agisco* (mando dati per modificare lo stato). Un form che salva usa `method="post"`.
+
+#### Il form HTML
+```blade
+<form action="/products" method="post">
+    @csrf
+    <label for="name">Nome:</label>
+    <input type="text" id="name" name="name">
+    ...
+    <button type="submit">Salva</button>
+</form>
+```
+- **`for` / `id` / `name` sono tre cose diverse**: `for` (label) ↔ `id` (input) legano etichetta e campo *nel browser* (clic sull'etichetta → focus sul campo; accessibilità); `id` serve anche a CSS/JS. **`name` è l'unico che parla col server**: è la chiave con cui il dato viaggia nel POST, e va letto per `name` nel controller. Un input senza `name` non viene inviato. (I `name` combaciano con le colonne DB e col `$fillable` → è il filo form→controller→tabella.)
+- **`action`** = *dove* mandare (URL/rotta); **`method`** = verbo HTTP. Il bottone `submit` è solo il grilletto: la destinazione la decide `action`, non il bottone.
+- **`@csrf`** (prima riga dentro il form): genera un `<input hidden name="_token">` con il token di sessione → protezione **CSRF** (Cross-Site Request Forgery: impedisce che un sito terzo faccia partire il POST dal browser di un utente loggato). Grammatica standard: ogni form POST ha `@csrf`, come ha `method="post"`. *(Nota: su Laravel 13 con setup minimale il 419 "Page Expired" può non scattare — ma il token va messo lo stesso, è la pratica corretta e servirà in prod. **Si verifica, non si indovina**: `route:list`, `bootstrap/app.php`, grep del middleware.)*
+
+#### Il metodo `store`
+```php
+public function store(Request $request)
+{
+    $request->validate([
+        'name'  => 'required|string|max:255',
+        'price' => 'required|numeric|min:0',
+        'stock' => 'required|integer|min:0',
+    ]);
+    Product::create([
+        'name'  => $request->name,
+        'price' => $request->price,
+        'stock' => $request->stock,
+    ]);
+    return redirect('/products');
+}
+```
+- **`$request`** = la richiesta HTTP incapsulata (Laravel la inietta col type-hint `Request`). I campi si leggono con `$request->name` (o `$request->input('name')`).
+- **`validate()` NON protegge da injection** (quella la fa Eloquent con PDO). Valida il **dominio**: che i dati abbiano senso per un prodotto. Regole concatenate con `|`. L'IDE autocompila `required` (troppo debole: dice solo "c'è") → rinforzare con tipo e vincoli (`numeric|min:0`, `integer|min:0`) coerenti con lo **schema migrazione**.
+- **`Product::create([...])`** = identico al seeder, ma i valori vengono dall'utente. Funziona solo perché `name`/`price`/`stock` sono nel **`$fillable`** (mass assignment).
+- **`return` obbligatorio** (grammatica PHP): `redirect(...)` senza `return` → il metodo torna `null` → **pagina bianca**. Come `return view(...)`. Helper `redirect('/products')` (minuscolo) ≈ facade `Redirect::to('/products')` (serve `use`).
+
+#### POST-Redirect-GET (perché `store` chiude con redirect, mai con `view`)
+Se dopo il POST restituissi direttamente `view(...)`, l'URL resterebbe legato a un POST → **F5 = "reinvia modulo" = doppione nel DB** (il bug dell'ordine addebitato due volte). Il **redirect** manda il browser a una `GET /products` pulita → ricaricabile all'infinito senza risalvare. Pattern in 3 tempi: **POST** (salva) → **Redirect** ("vai a leggere") → **GET** (mostra, sola lettura). Regola: `store`/`update`/`destroy` finiscono con `return redirect(...)`, **mai** `return view(...)`.
+
+#### 🎯 Strumento del peso giusto: `<a href>` vs `<form>`
+Per *cambiare pagina* (es. pulsante "Crea" che porta al form) basta un **link**:
+```blade
+<a href="/products/create">Crea nuovo prodotto</a>
+```
+Costruire form + route + metodo `redirect()` per navigare è **un cannone per una mosca** (e apre bug: route duplicata `GET /products` che oscura `index`). Distinzione da tenere: **`<a href>` = navigare** (vai lì, GET); **`<form method=post>` = agire** (fai accadere qualcosa, modifica di stato). Un link *al* form è navigazione; l'azione (creare) avviene *dopo*, al Salva. Segnale d'allarme: se costruisci un'impalcatura per una cosa che *senti* dovrebbe essere semplice, probabilmente hai scelto lo strumento sbagliato.
