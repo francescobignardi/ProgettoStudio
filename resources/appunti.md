@@ -19,6 +19,7 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [Laravel — controller (primo passo MVC)](#laravel--controller-primo-passo-mvc)
 - [Eloquent — model, migration, seeder + flusso del dato](#eloquent--model-migration-seeder--flusso-del-dato)
 - [CRUD — scrivere dati: form, POST, validazione, store (la C)](#crud--scrivere-dati-form-post-validazione-store-la-c)
+- [CRUD — modificare ed eliminare: PUT/DELETE, method spoofing (U e D)](#crud--modificare-ed-eliminare-putdelete-method-spoofing-u-e-d)
 
 ---
 
@@ -411,3 +412,60 @@ Per *cambiare pagina* (es. pulsante "Crea" che porta al form) basta un **link**:
 <a href="/products/create">Crea nuovo prodotto</a>
 ```
 Costruire form + route + metodo `redirect()` per navigare è **un cannone per una mosca** (e apre bug: route duplicata `GET /products` che oscura `index`). Distinzione da tenere: **`<a href>` = navigare** (vai lì, GET); **`<form method=post>` = agire** (fai accadere qualcosa, modifica di stato). Un link *al* form è navigazione; l'azione (creare) avviene *dopo*, al Salva. Segnale d'allarme: se costruisci un'impalcatura per una cosa che *senti* dovrebbe essere semplice, probabilmente hai scelto lo strumento sbagliato.
+
+---
+
+### CRUD — modificare ed eliminare: PUT/DELETE, method spoofing (U e D)
+
+La **U** (Update) ricalca la **C**: due rotte in coppia, ma con un form **pre-riempito** e il verbo **PUT**. La **D** (Delete) è una sola rotta col verbo **DELETE**.
+
+#### 🎯 REST: stesso URL, il verbo decide l'azione
+La rotta di una risorsa **non** cambia URL per azione (no `/update`, no `/delete`). Cambia il **verbo HTTP** sullo **stesso** `/products/{id}`:
+
+| Azione | Verbo | URL | Metodo |
+|--------|-------|-----|--------|
+| Mostra | GET | `/products/{id}` | `show` |
+| Aggiorna | PUT | `/products/{id}` | `update` |
+| Elimina | DELETE | `/products/{id}` | `destroy` |
+
+L'URL dice *quale* risorsa; il **verbo** dice *cosa* ci faccio. (Nomi metodo = convenzione resource Laravel: `index/create/store/show/edit/update/destroy`.)
+
+#### ⚠️ Method spoofing (il form HTML sa solo GET e POST)
+La spec HTML permette solo `GET`/`POST` in `method=""`. Per usare PUT/DELETE da un form Blade:
+```blade
+<form action="/products/{{ $product->id }}" method="post">
+    @method('PUT')   {{-- genera <input hidden name="_method" value="PUT"> --}}
+    @csrf
+    ...
+</form>
+```
+Il browser manda una **POST**; un middleware Laravel legge `_method` e **riscrive il verbo** *prima* di cercare la rotta → matcha `Route::put(...)`. Trucco che serve **solo** nel mondo form+Blade: con JS (`fetch`) mandi qualsiasi verbo nativamente. `@csrf` serve comunque (è pur sempre una POST).
+- **Trappola vissuta**: `<form>` *senza* `method` fa **GET** di default → `/products/6` matcha `show` → sembra un "redirect" al dettaglio. Il verbo mancante ti manda sulla rotta sbagliata.
+- **Il `<button>` non invia da solo**: non ha `action`. È il **form** che parla col server; il bottone è solo il grilletto. Per un'azione (eliminare) serve un `<form>`, non basta un `<a>`.
+
+#### Update: `edit` (mostra) + `update` (scrive)
+```php
+public function edit(int $id) {
+    $product = Product::findOrFail($id);       // come show: 404 se non c'è
+    return view('edit', ['product' => $product]);
+}
+public function update(Request $request, int $id) {
+    $request->validate([...]);                 // stesse regole di store
+    $product = Product::findOrFail($id);
+    $product->update([...]);                   // metodo d'ISTANZA (->), non statico
+    return redirect('/products');              // POST-Redirect-GET, come store
+}
+```
+- Il form di edit è **pre-riempito**: `<input ... value="{{ $product->name }}">`. `edit()` legge il modello e lo passa alla view (a differenza di `create`, che serve un form vuoto).
+- **`::` vs `->` (statico vs istanza)** — la lezione grossa. `Product::create(...)` è statico: crea da zero, parte dalla *classe*. `$product->update(...)` è d'istanza: modifica un oggetto *che esiste già*. `update` in statico → errore. L'IDE suggerisce `(new Product)->update(...)`: sintatticamente ok, **concettualmente sbagliato** — `new Product` è vuoto, senza id → non sa quale riga toccare. Campanello: se un `$id` risulta *inutilizzato* in un update, manca il "su cosa" scrivo.
+- **`findOrFail` + `->update` batte `Product::where('id',$id)->update([...])`**: la seconda è un `UPDATE ... WHERE` diretto che, se l'id non esiste, aggiorna **zero righe senza errore** (redirect silenzioso, nessun 404). Separare *trova* (con guardia 404) da *modifica* è più robusto e coerente con `edit`. Una riga = un compito.
+
+#### Delete: `destroy`
+```php
+public function destroy(int $id) {
+    Product::destroy($id);          // STATICO: prende l'id (o array di id) e cancella
+    return redirect('/products');
+}
+```
+- `destroy` **statico** va bene: non deve caricare l'istanza prima. Non lancia 404 se l'id non esiste (ritorna solo il conteggio) → per un delete è un no-op innocuo. Se volessi il 404: `findOrFail($id)->delete()`.
+- Nome "aggressivo" **di proposito**: cancellare è irreversibile, il nome tiene alta l'attenzione (stessa filosofia di `findOrFail` che "spacca" invece di dare `null`).
