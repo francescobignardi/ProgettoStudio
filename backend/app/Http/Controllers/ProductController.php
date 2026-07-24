@@ -67,4 +67,10 @@ class ProductController extends Controller
         ]);
         return Redirect::to('/products');
     }
+
+    public function destroy(int $id)
+    {
+        Product::destroy($id);
+        return Redirect::to('/products');
+    }
 }
