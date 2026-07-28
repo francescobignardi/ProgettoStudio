@@ -14,7 +14,7 @@ class ProductSeeder extends Seeder
     public function run(): void
     {
         Product::create([
-            'name' => 'Tastiera',
+            'name' => 'Keyboard',
             'price' => 89.90,
             'stock' => 12,
         ]);

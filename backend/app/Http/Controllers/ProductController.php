@@ -11,7 +11,7 @@ class ProductController extends Controller
     public function index()
     {
         $products = Product::where('stock', '>', 0)->orderBy('price', 'desc')->orderBy('name', 'asc')->get();
-        return view('products', [
+        return view('products.index', [
             'products' => $products
         ]);
     }
@@ -19,14 +19,14 @@ class ProductController extends Controller
     public function show(int $id)
     {
         $product = Product::findOrFail($id);
-        return view('product', [
+        return view('products.show', [
             'product' => $product
         ]);
     }
 
     public function create()
     {
-        return view('create');
+        return view('products.create');
     }
 
     public function store(Request $request)
@@ -47,7 +47,7 @@ class ProductController extends Controller
     public function edit(int $id)
     {
         $product = Product::findOrFail($id);
-        return view('edit', [
+        return view('products.edit', [
             'product' => $product
         ]);
     }
