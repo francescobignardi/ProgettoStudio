@@ -1,23 +1,23 @@
 <div>
-    <h2>Form di creazione prodotto</h2>
+    <h2>Create product form</h2>
 
     <form action="/products" method="post">
         @csrf
-        <label for="name">Nome:</label>
+        <label for="name">Name:</label>
         <input type="text" id="name" name="name">
         <br>
         <br>
 
-        <label for="price">Prezzo:</label>
+        <label for="price">Price:</label>
         <input type="text" id="price" name="price">
         <br>
         <br>
 
-        <label for="stock">Quantità:</label>
+        <label for="stock">Quantity:</label>
         <input type="text" id="stock" name="stock">
         <br>
         <br>
 
-        <button type="submit">Salva</button>
+        <button type="submit">Save</button>
     </form>
 </div>

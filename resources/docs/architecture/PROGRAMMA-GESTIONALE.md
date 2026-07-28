@@ -230,7 +230,11 @@ Ognuna è un incremento a sé, da aprire solo quando la fase precedente è conso
 - **Cancellazione**: hard delete vs soft delete (cancellazione logica) per ordini/documenti.
 - **Stati** dell'ordine e della ricezione: quanti e quali, e chi governa le transizioni.
 - **Totali** (`amount`, `total`): campi persistiti vs derivati dalle righe.
-- **Numerazione** dei documenti (`code`): progressiva? per anno?
+- **Numerazione / `code`**: chi lo genera? Due mondi — **A)** scritto dall'utente (input,
+  `unique`), **B)** generato dal sistema (progressivo automatico, con le sue trappole di
+  concorrenza). *Deciso in A.1 (2026-07-28)*: per ora **mondo A** su `Supplier` (`code` intero
+  unico, digitato). La generazione automatica di progressivi si valuterà quando arriveranno i
+  **documenti** (ordini/ricezioni), dove il tema pesa di più.
 
 Nessuna va decisa adesso: le sblocchiamo una alla volta quando la relativa entità entra in gioco.
 

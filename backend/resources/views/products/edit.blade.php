@@ -1,24 +1,24 @@
 <div>
-    <h2>Form di modifica prodotto</h2>
+    <h2>Edit product form</h2>
 
     <form action="/products/{{ $product->id }}" method="post">
         @method('PUT')
         @csrf
-        <label for="name">Nome:</label>
+        <label for="name">Name:</label>
         <input type="text" id="name" name="name" value="{{ $product->name }}">
         <br>
         <br>
 
-        <label for="price">Prezzo:</label>
+        <label for="price">Price:</label>
         <input type="text" id="price" name="price" value="{{ $product->price }}">
         <br>
         <br>
 
-        <label for="stock">Quantità:</label>
+        <label for="stock">Quantity:</label>
         <input type="text" id="stock" name="stock" value="{{ $product->stock }}">
         <br>
         <br>
 
-        <button type="submit">Salva</button>
+        <button type="submit">Save</button>
     </form>
 </div>

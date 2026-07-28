@@ -18,12 +18,13 @@
 
 ---
 
-## Capitolo A — Fondamenta relazionali (Supplier + primo documento d'ordine)   [0 / 6]
+## Capitolo A — Fondamenta relazionali (Supplier + primo documento d'ordine)   [1 / 6]
 
 Obiettivo: passare da "singola tabella" (`Product` di oggi) a un modello con relazioni, arrivando
 al primo **documento testata+righe**. È il salto concettuale più importante del backend.
 
-- [ ] **A.1** — `Supplier`: migration + model + CRUD minimo (lista/crea/mostra). Punto d'ingresso.
+- [x] **A.1** — `Supplier`: migration + model + CRUD minimo (lista/crea/mostra). Punto d'ingresso.
+      Fatto con `Route::resource(...)->only([...])`, seeder, dettaglio per `id`.
 - [ ] **A.2** — Relazione **① `Supplier` 1-a-molti `PurchaseOrder`**: migration `PurchaseOrder`
       con FK `supplier_id`, metodi `hasMany`/`belongsTo`.   → §3 ①
 - [ ] **A.3** — Seed realistico: qualche fornitore + prodotti, così il sistema è "vivo" da provare.
@@ -93,4 +94,4 @@ Restano al livello del PROGRAMMA §7; le scomporremo in capitoli quando ci arriv
 
 Una riga per sessione: data → cosa si è chiuso. (Il dettaglio narrativo sta nei diary `resources/memory/`.)
 
-- _(ancora niente: il primo passo operativo sarà A.1)_
+- **2026-07-28** — A.1 chiuso (`Supplier`: migration + model + CRUD minimo, `Route::resource->only`, seeder). Refactor infrastrutturale (non un passo A–D): view riorganizzate in cartelle per entità (`products/`, `suppliers/`) con nomi resource; UI + dati seed portati in **inglese**; corretto bug redirect (`view()`=punto vs URL=slash) e markup `<form>`-in-`<p>`.
