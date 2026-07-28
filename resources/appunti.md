@@ -20,6 +20,7 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [Eloquent — model, migration, seeder + flusso del dato](#eloquent--model-migration-seeder--flusso-del-dato)
 - [CRUD — scrivere dati: form, POST, validazione, store (la C)](#crud--scrivere-dati-form-post-validazione-store-la-c)
 - [CRUD — modificare ed eliminare: PUT/DELETE, method spoofing (U e D)](#crud--modificare-ed-eliminare-putdelete-method-spoofing-u-e-d)
+- [View: organizzazione a cartelle + `view()` vs URL (punto vs slash)](#view-organizzazione-a-cartelle--view-vs-url-punto-vs-slash)
 
 ---
 
@@ -469,3 +470,31 @@ public function destroy(int $id) {
 ```
 - `destroy` **statico** va bene: non deve caricare l'istanza prima. Non lancia 404 se l'id non esiste (ritorna solo il conteggio) → per un delete è un no-op innocuo. Se volessi il 404: `findOrFail($id)->delete()`.
 - Nome "aggressivo" **di proposito**: cancellare è irreversibile, il nome tiene alta l'attenzione (stessa filosofia di `findOrFail` che "spacca" invece di dare `null`).
+
+---
+
+### View: organizzazione a cartelle + `view()` vs URL (punto vs slash)
+
+Con più entità le view "piatte" diventano ambigue (`create.blade.php` — di chi? del product o del supplier?). Convenzione Laravel: **una cartella per entità**, con file che ricalcano i metodi del controller.
+```
+resources/views/
+  products/   index · show · create · edit
+  suppliers/  index · show · create
+```
+- Nel controller: **notazione a punto** `view('products.index')` → cerca `resources/views/products/index.blade.php`. Il punto = separatore cartella/file. I nomi delle view rispecchiano i metodi resource (`index/show/create/edit`) → stesso vocabolario ovunque, `create` dentro `products/` non si confonde più con quello dentro `suppliers/`.
+- Gli `href`/`action` nelle view **non** cambiano col refactor: puntano a **URL** (`/products/create`), non a nomi di view. Rinominare/spostare i `.blade.php` non li tocca.
+
+#### ⚠️ `view()` e URL parlano due lingue diverse (il bug del punto negli URL)
+Trappola vissuta: dopo aver messo il punto nelle `view()`, applicarlo **anche** a un redirect → `Redirect::to('/products.index')` → **404**. Il browser prova a raggiungere l'URL `/products.index`, che nessuna route serve.
+
+| Funzione | Destinatario | Vuole | Il punto `.`? |
+|---|---|---|---|
+| `view('products.index')` | Laravel/Blade (server) | **nome view** (cartella.file, percorso di *file*) | **sì** |
+| `Redirect::to('/products')` | browser | **URL** (percorso web) | **mai** |
+| `href="/products"` · `action="/products"` | browser | **URL** | **mai** |
+
+Regola in tasca: **restituisci una view → punto; mandi il browser da qualche parte (redirect/href/action) → slash.** Sono mondi separati: uno è un percorso di file interno al server, l'altro è un indirizzo che il browser digita.
+
+**Metodo di debug che ha sciolto il nodo**: due osservazioni sembravano *un* indizio ("404 + URL strano"), erano *due* fatti. Isolare "il record viene comunque cancellato?" (sì → il `destroy` funziona, il redirect no) ha separato il problema. Guardare **l'URL nella barra dopo l'azione** dice dove il redirect ha spedito davvero: la diagnosi guida il fix, non il contrario.
+
+*(Evoluzione futura: per testi multilingua il modo idiomatico Laravel sono i file di localizzazione in `lang/`, non stringhe inline nelle view. Rimandato — over-engineering per una demo.)*
