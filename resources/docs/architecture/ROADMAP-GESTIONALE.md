@@ -18,17 +18,19 @@
 
 ---
 
-## Capitolo A — Fondamenta relazionali (Supplier + primo documento d'ordine)   [1 / 6]
+## Capitolo A — Fondamenta relazionali (Supplier + primo documento d'ordine)   [3 / 6]
 
 Obiettivo: passare da "singola tabella" (`Product` di oggi) a un modello con relazioni, arrivando
 al primo **documento testata+righe**. È il salto concettuale più importante del backend.
 
 - [x] **A.1** — `Supplier`: migration + model + CRUD minimo (lista/crea/mostra). Punto d'ingresso.
       Fatto con `Route::resource(...)->only([...])`, seeder, dettaglio per `id`.
-- [ ] **A.2** — Relazione **① `Supplier` 1-a-molti `PurchaseOrder`**: migration `PurchaseOrder`
+- [x] **A.2** — Relazione **① `Supplier` 1-a-molti `PurchaseOrder`**: migration `PurchaseOrder`
       con FK `supplier_id`, metodi `hasMany`/`belongsTo`.   → §3 ①
-- [ ] **A.3** — Seed realistico: qualche fornitore + prodotti, così il sistema è "vivo" da provare.
-      → §1-bis principio 2
+- [x] **A.3** — Seed realistico via **Factory**: `SupplierFactory` + `PurchaseOrderFactory` (Faker,
+      `HasFactory` sui model). Seed unificato che sfrutta la relazione: `Supplier::factory()->count(10)
+      ->has(PurchaseOrder::factory()->count(5))->create()` (10 fornitori × 5 ordini). `PurchaseOrderSeeder`
+      eliminato (creazione ora "da fornitore a ordini" in `SupplierSeeder`).   → §1-bis principio 2
 - [ ] **A.4** — Relazione **② `PurchaseOrder` 1-a-molti `PurchaseOrderRow`**: le righe del documento;
       concetto di **cascata** on delete e di **totale derivato** dalle righe.   → §3 ②
 - [ ] **A.5** — UI minima del documento: creare un ordine con le sue righe, vederlo.
@@ -94,4 +96,5 @@ Restano al livello del PROGRAMMA §7; le scomporremo in capitoli quando ci arriv
 
 Una riga per sessione: data → cosa si è chiuso. (Il dettaglio narrativo sta nei diary `resources/memory/`.)
 
+- **2026-08-06** — A.3 chiuso (seed realistico via **Factory** + Faker; `HasFactory` sui model; seed unificato `Supplier->has(PurchaseOrder)` che sfrutta la relazione ①; `PurchaseOrderSeeder` eliminato). Verificato: 10 supplier × 5 ordini = 50, distribuiti 5-a-testa.
 - **2026-07-28** — A.1 chiuso (`Supplier`: migration + model + CRUD minimo, `Route::resource->only`, seeder). Refactor infrastrutturale (non un passo A–D): view riorganizzate in cartelle per entità (`products/`, `suppliers/`) con nomi resource; UI + dati seed portati in **inglese**; corretto bug redirect (`view()`=punto vs URL=slash) e markup `<form>`-in-`<p>`.

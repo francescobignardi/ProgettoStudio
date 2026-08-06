@@ -17,7 +17,7 @@ Quaderno personale di Francesco. Concetti chiave estratti durante il percorso di
 - [Laravel — routing + artisan serve](#laravel--routing--artisan-serve)
 - [Blade — grammatica minima](#blade--grammatica-minima)
 - [Laravel — controller (primo passo MVC)](#laravel--controller-primo-passo-mvc)
-- [Eloquent — model, migration, seeder + flusso del dato](#eloquent--model-migration-seeder--flusso-del-dato)
+- [Eloquent — model, migration, seeder, factory + flusso del dato](#eloquent--model-migration-seeder--flusso-del-dato)
 - [CRUD — scrivere dati: form, POST, validazione, store (la C)](#crud--scrivere-dati-form-post-validazione-store-la-c)
 - [CRUD — modificare ed eliminare: PUT/DELETE, method spoofing (U e D)](#crud--modificare-ed-eliminare-putdelete-method-spoofing-u-e-d)
 - [View: organizzazione a cartelle + `view()` vs URL (punto vs slash)](#view-organizzazione-a-cartelle--view-vs-url-punto-vs-slash)
@@ -287,6 +287,51 @@ Leggere come frase: "GET /ciao → esegui metodo `ciao` di `PrimoController`". L
   - **`php artisan db:seed --class=ProductSeeder`** → esegue solo quello.
 - **⚠️ I seeder NON hanno memoria** (nessuna tabella di tracciamento, a differenza delle migration). Rilanciare `db:seed` **riesegue tutto e accumula** (4 prodotti → 8 → 12…), e sbatte contro i vincoli `unique` (es. lo `User` di default con email unica → `UniqueConstraintViolationException`).
 - **Reset pulito**: **`php artisan migrate:fresh --seed`**. `fresh` **droppa TUTTE le tabelle** (ignora i `down()`, non è un rollback per batch), rilancia tutte le migration da zero (id azzerati), poi `--seed` ripopola. È il "reset del mondo" quotidiano in sviluppo — e la risposta al dolore del `down()` chirurgico: in dev si rade al suolo, non si fanno rollback fini. **MAI in produzione** (cancella tutti i dati).
+
+#### Factory — la "stampante" di dati finti (Faker)
+
+Il seeder scritto a mano (`create([...])` per riga) non scala: 10 record = 10 blocchi quasi
+identici. La **Factory** definisce *la forma* di un record **una volta**, poi ne genera N.
+
+- Genera: **`php artisan make:factory SupplierFactory`** → `database/factories/`. Convenzione: `<Model>Factory`.
+- Dentro **`definition()`**: un array `colonna => valore`, ma i valori li produce **Faker** (`fake()`):
+  `fake()->name()`, `fake()->address()`, `fake()->unique()->randomNumber(4, true)`,
+  `fake()->dateTimeBetween('-1 year', 'now')->format('Y-m-d')`, `fake()->randomElement([...])`.
+  ⚠️ **`fake()` va sempre *chiamato*** su un metodo: `fake()->text()`, non `fake()` nudo (sennò infili
+  l'oggetto generatore in una colonna stringa → errore).
+- ⚠️ La factory descrive **solo le colonne della SUA tabella**. Copiando da `UserFactory` è facile
+  trascinarsi dietro roba altrui (es. `protected static $password`): va tolta, è di dominio *user*.
+- 🎯 **Range relativo vs hardcodato**: `dateTimeBetween('-1 year', 'now')` invecchia bene (sempre
+  passato, ancorato a *quando* giri il seed) vs `('2026-01-01','2026-12-31')` fisso e con date future.
+- **Il ponte model↔factory è il trait `HasFactory`**: senza `use HasFactory;` nel model →
+  `Call to undefined method ...::factory()`. È per questo che `User` funziona "da solo" (ce l'ha).
+
+#### Factory + relazione: `has()` costruisce i figli (sfrutta `hasMany`)
+
+Il pezzo forte: creare **padre e figli in un colpo**, lasciando che Laravel colleghi le FK.
+
+    Supplier::factory()->count(10)->has(PurchaseOrder::factory()->count(5))->create();
+    // 10 fornitori, ognuno con 5 ordini. supplier_id riempito da Laravel, niente inRandomOrder().
+
+- **`has()`** trova la relazione **per convenzione** (cerca sul model un metodo col nome plurale del
+  figlio → `purchaseOrders()`). È il motivo per cui la relazione `hasMany` di A.2 diventa *usata*, non
+  decorativa. Si legge "da padre a figli": per questo la riga sta in `SupplierSeeder`, non nell'altro.
+- 🎯 **Dove mettere la creazione unificata**: segui la **dipendenza esistenziale**. L'ordine non esiste
+  senza fornitore (il fornitore sì senza ordini) → il fornitore è la *radice*, si parte da lui. Forma
+  del codice (`Supplier::factory()->has(...)`) e semantica coincidono. Il seeder del figlio si elimina
+  (creazione ora "dentro" quella del padre) → niente seeder-fantasma vuoti (codice morto).
+
+#### ⚠️ `make()` vs `create()` — e la trappola delle relazioni annidate
+
+- **`make()`** costruisce l'oggetto **in memoria, senza salvare** — utile in tinker per *ispezionare*
+  cosa genera Faker a costo zero. **`create()`** persiste.
+- ⚠️ **MA**: `PurchaseOrder::factory()->make()` con `'supplier_id' => Supplier::factory()` dentro
+  **salva comunque il Supplier annidato** (una FK deve puntare a qualcosa di reale). Prova: dopo un
+  `make()`, `Supplier::count()` è cresciuto. Morale: `make()` è "senza salvare" **solo per l'entità in
+  cima**, non per le factory annidate. (Sorprende spesso quando si scrivono i test.)
+- 🔧 **Tinker fotografa il codice all'avvio**: se modifichi un model/factory con la shell aperta,
+  l'errore persiste finché non **riavvii** tinker. E le classi vanno chiamate col **FQN**
+  (`App\Models\Supplier`) o importate con `use` prima.
 
 #### 🔀 Flusso del dato (mappa mentale per il debug)
 
